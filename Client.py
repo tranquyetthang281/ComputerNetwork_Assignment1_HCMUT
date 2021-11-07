@@ -39,6 +39,17 @@ class Client:
         self.teardownAcked = 0
         self.connectToServer()
         self.frameNbr = 0
+	
+	print("Initializing the movie.")
+	self.setupMovie()
+        self.sessionStartTime = time()
+        self.sumOfDeltaTime = 0
+        self.totalLen = 0
+	
+	self.startTime = 0
+        self.endTime = 0
+        self.numLostPackets = 0
+        self.numSentPackets = 0
 
     # THIS GUI IS JUST FOR REFERENCE ONLY, STUDENTS HAVE TO CREATE THEIR OWN GUI
     def createWidgets(self):
@@ -79,8 +90,12 @@ class Client:
 
     def exitClient(self):
         """Teardown button handler."""
-        self.sendRtspRequest(self.TEARDOWN)		
-		self.master.destroy()
+        self.sendRtspRequest(self.TEARDOWN)
+	
+	print("Packet loss ratio : " + str(float(self.numLostPackets)/float(self.numSentPackets)))
+        print("Video Data Rate : " + str(float(self.totalLen)/float(self.sumOfDeltaTime)))
+	
+	self.master.destroy()
 		os.remove(CACHE_FILE_NAME + str(self.sessionId) + CACHE_FILE_EXT)
 
     def pauseMovie(self):
@@ -104,6 +119,7 @@ class Client:
 				print("LISTENING...")
 				data = self.rtpSocket.recv(20480)
 				if data:
+					self.numSentPackets += 1
 					rtpPacket = RtpPacket()
 					rtpPacket.decode(data)
 					
@@ -111,6 +127,8 @@ class Client:
 					print ("CURRENT SEQUENCE NUM: " + str(currFrameNbr))
 										
 					if currFrameNbr > self.frameNbr: # Discard the late packet
+						self.numLostPackets += currFrameNbr - self.frameNbr - 1
+                        			self.totalLen += len(data)
 						self.frameNbr = currFrameNbr
 						self.updateMovie(self.writeFrame(rtpPacket.getPayload()))
 			except:
@@ -165,6 +183,9 @@ class Client:
 
         # Play request
         elif requestCode == self.PLAY and self.state == self.READY:
+	    self.endTime = time()
+            self.sumOfDeltaTime += self.endTime - self.startTime
+            self.startTime = self.endTime
             # Update RTSP sequence number.
             self.rtspSeq += 1
 
@@ -177,6 +198,8 @@ class Client:
 
         # Pause request
         elif requestCode == self.PAUSE and self.state == self.PLAYING:
+	    self.endTime = time()
+            self.sumOfDeltaTime += self.endTime - self.startTime    
             # Update RTSP sequence number.
             self.rtspSeq += 1
 
