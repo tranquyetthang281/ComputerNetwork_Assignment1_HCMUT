@@ -92,6 +92,7 @@ class Client:
         """Teardown button handler."""
         self.sendRtspRequest(self.TEARDOWN)
 	
+	# Extend1----------
 	print("Packet loss ratio : " + str(float(self.numLostPackets)/float(self.numSentPackets)))
         print("Video Data Rate : " + str(float(self.totalLen)/float(self.sumOfDeltaTime)))
 	
